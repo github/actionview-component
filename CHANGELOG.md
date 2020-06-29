@@ -1,5 +1,11 @@
 # master
 
+# 3.0.0
+
+* Change counter variable to start iterating from `0` instead of `1`.
+
+    *Frank S*
+
 # 2.11.1
 
 * Fix kwarg warnings in Ruby 2.7.
