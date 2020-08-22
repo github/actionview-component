@@ -646,10 +646,12 @@ class ViewComponentTest < ViewComponent::TestCase
     assert_selector("li", text: "Apple")
     assert_selector("li", text: "Banana")
     assert_selector("li", text: "Pear")
+    assert_selector("ul", text: "1")
 
     render_inline(MultipleTemplatesComponent.new(mode: :summary))
 
     assert_selector("div", text: "Apple, Banana, and Pear")
+    assert_selector("div", text: "foo")
   end
 
   def test_renders_component_using_rails_config

@@ -271,26 +271,14 @@ module ViewComponent
           end
 
         templates.each do |template|
+          method_name, method_args = method_name_and_args_for template
+
           # Remove existing compiled template methods,
           # as Ruby warns when redefining a method.
-
-          pieces = File.basename(template[:path]).split(".")
-
-          method_name =
-            # If the template matches the name of the component,
-            # set the method name with call_method_name
-            if pieces.first == name.demodulize.underscore
-              call_method_name(template[:variant])
-            # Otherwise, append the name of the template to
-            # call_method_name
-            else
-              "#{call_method_name(template[:variant])}_#{pieces.first.to_sym}"
-            end
-
           undef_method(method_name.to_sym) if instance_methods.include?(method_name.to_sym)
 
           class_eval <<-RUBY, template[:path], line_number
-            def #{method_name}
+            def #{method_name}(#{method_args.join(", ")})
               @output_buffer = ActionView::OutputBuffer.new
               #{compiled_template(template[:path])}
             end
@@ -298,6 +286,23 @@ module ViewComponent
         end
 
         CompileCache.register self
+      end
+
+      # Declares arguments that need to be passed to a template.
+      #
+      # If a sidecar template needs additional locals that need to be passed
+      # at call site, then this method should be used.
+      #
+      # The signature for the resulting method will use keyword arguments
+      #
+      # @param [Symbol, String] template The template that needs arguments
+      # @param [Array<Symbol>] *args The arguments for the template
+      def template_arguments(template, *args)
+        @template_arguments ||= {}
+        template = template.to_s
+        raise ArgumentError, "Arguments already defined for template #{template}" if @template_arguments.key?(template)
+        raise ArgumentError, "Template does not exist: #{template}" if templates.none? { |t| t[:base_name].split(".").first == template }
+        @template_arguments[template] = args
       end
 
       # we'll eventually want to update this to support other types
@@ -370,6 +375,18 @@ module ViewComponent
           handler.call(self, template)
         else
           handler.call(OpenStruct.new(source: template, identifier: identifier, type: type))
+        end
+      end
+
+      def method_name_and_args_for(template)
+        pieces = template[:base_name].split(".")
+        if pieces.first == name.demodulize.underscore
+          [call_method_name(template[:variant]), []]
+        else
+          [
+            "#{call_method_name(template[:variant])}_#{pieces.first.to_sym}",
+            (@template_arguments || {}).fetch(pieces.first, []).map { |arg| "#{arg}:" }
+          ]
         end
       end
 

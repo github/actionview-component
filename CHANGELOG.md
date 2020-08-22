@@ -2,7 +2,7 @@
 
 * Add support for multiple templates.
 
-    *Rob Sterner*, *Joel Hawksley*
+    *Rob Sterner*, *Joel Hawksley*, *Felipe Sateler*
 
 # 2.18.1
 
