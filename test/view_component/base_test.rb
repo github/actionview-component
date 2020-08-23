@@ -25,4 +25,35 @@ class ViewComponent::Base::UnitTest < Minitest::Test
       end
     end
   end
+
+  def test_template_arguments_validates_existence
+    error = assert_raises ArgumentError do
+      Class.new(ViewComponent::Base) do
+        def self.matching_views_in_source_location
+          [
+            "/Users/fake.user/path/to.templates/component/test_component/test_component.html.erb",
+            "/Users/fake.user/path/to.templates/component/test_component/sidecar.html.erb",
+          ]
+        end
+        template_arguments :non_existing, [:foo]
+      end
+    end
+    assert_equal "Template does not exist: non_existing", error.message
+  end
+
+  def test_template_arguments_validates_duplicates
+    error = assert_raises ArgumentError do
+      Class.new(ViewComponent::Base) do
+        def self.matching_views_in_source_location
+          [
+            "/Users/fake.user/path/to.templates/component/test_component/test_component.html.erb",
+            "/Users/fake.user/path/to.templates/component/test_component/sidecar.html.erb",
+          ]
+        end
+        template_arguments :sidecar, [:foo]
+        template_arguments :sidecar, [:bar]
+      end
+    end
+    assert_equal "Arguments already defined for template sidecar", error.message
+  end
 end

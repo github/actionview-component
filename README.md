@@ -384,6 +384,61 @@ The component can then be rendered using the folder name as a namespace:
 <% end %>
 ```
 
+#### Multiple templates
+
+ViewComponents can render multiple templates defined in the sidecar directory:
+
+```
+app/components
+├── ...
+├── test_component.rb
+├── test_component
+|   ├── list.html.erb
+|   └── summary.html.erb
+├── ...
+```
+
+Templates are compiled to methods in the format `call_#{template_basename}`, which can then be called in the component.
+
+```ruby
+class TestComponent < ViewComponent::Base
+  def initialize(mode:)
+    @mode = mode
+  end
+
+  def call
+    case @mode
+    when :list
+      call_list
+    when :summary
+      call_summary
+    end
+  end
+end
+```
+
+You can define templates that take parameters, using the `template_arguments` method.
+
+```ruby
+class TestComponent < ViewComponent::Base
+  template_arguments :list, :multiple # call_list now takes a `multiple` keyword argument
+  def initialize(mode:)
+    @mode = mode
+  end
+
+  def call
+    case @mode
+    when :list
+      call_list multiple: false
+    when :multilist
+      call_list multiple: true
+    when :summary
+      call_summary
+    end
+  end
+end
+```
+
 ### Conditional Rendering
 
 Components can implement a `#render?` method to be called after initialization to determine if the component should render.

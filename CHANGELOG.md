@@ -1,5 +1,9 @@
 # master
 
+* Add support for multiple templates.
+
+    *Rob Sterner*, *Joel Hawksley*, *Felipe Sateler*
+
 # 2.18.1
 
 * Fix bug where previews didn't work when monkey patch was disabled.
