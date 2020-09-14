@@ -12,6 +12,8 @@ module ViewComponent
     include ActiveSupport::Configurable
     include ViewComponent::Previewable
 
+    ViewContextCalledBeforeRenderError = Class.new(StandardError)
+
     # For CSRF authenticity tokens in forms
     delegate :form_authenticity_token, :protect_against_forgery?, :config, to: :helpers
 
@@ -108,17 +110,19 @@ module ViewComponent
     end
 
     def controller
+      raise ViewContextCalledBeforeRenderError, "`controller` can only be called at render time." if view_context.nil?
       @controller ||= view_context.controller
     end
 
     # Provides a proxy to access helper methods from the context of the current controller
     def helpers
+      raise ViewContextCalledBeforeRenderError, "`helpers` can only be called at render time." if view_context.nil?
       @helpers ||= controller.view_context
     end
 
-    # Removes the first part of the path and the extension.
+    # Exposes .virutal_path as an instance method
     def virtual_path
-      self.class.source_location.gsub(%r{(.*app/components)|(\.rb)}, "")
+      self.class.virtual_path
     end
 
     # For caching, such as #cache_if
@@ -166,7 +170,7 @@ module ViewComponent
     mattr_accessor :render_monkey_patch_enabled, instance_writer: false, default: true
 
     class << self
-      attr_accessor :source_location
+      attr_accessor :source_location, :virtual_path
 
       # Render a component collection.
       def with_collection(collection, **args)
@@ -179,6 +183,10 @@ module ViewComponent
       end
 
       def inherited(child)
+        # Compile so child will inherit compiled `call_*` template methods that
+        # `compile` defines
+        compile
+
         # If we're in Rails, add application url_helpers to the component context
         if defined?(Rails)
           child.include Rails.application.routes.url_helpers unless child < Rails.application.routes.url_helpers
@@ -188,6 +196,9 @@ module ViewComponent
         # We need to ignore `inherited` frames here as they indicate that `inherited`
         # has been re-defined by the consuming application, likely in ApplicationComponent.
         child.source_location = caller_locations(1, 10).reject { |l| l.label == "inherited" }[0].absolute_path
+
+        # Removes the first part of the path and the extension.
+        child.virtual_path = child.source_location.gsub(%r{(.*app/components)|(\.rb)}, "")
 
         # Clone slot configuration into child class
         # see #test_slots_pollution
@@ -378,17 +389,17 @@ module ViewComponent
 
         location_without_extension = source_location.chomp(File.extname(source_location))
 
-        extenstions = ActionView::Template.template_handler_extensions.join(",")
+        extensions = ActionView::Template.template_handler_extensions.join(",")
 
-        # view files in the same directory as te component
-        sidecar_files = Dir["#{location_without_extension}.*{#{extenstions}}"]
+        # view files in the same directory as the component
+        sidecar_files = Dir["#{location_without_extension}.*{#{extensions}}"]
 
         # view files in a directory named like the component
         directory = File.dirname(source_location)
         filename = File.basename(source_location, ".rb")
         component_name = name.demodulize.underscore
 
-        sidecar_directory_files = Dir["#{directory}/#{component_name}/#{filename}.*{#{extenstions}}"]
+        sidecar_directory_files = Dir["#{directory}/#{component_name}/#{filename}.*{#{extensions}}"]
 
         (sidecar_files - [source_location] + sidecar_directory_files)
       end

@@ -14,13 +14,22 @@ module ViewComponent
         assert_no_selector("body")
       end
     rescue LoadError
-      warn "WARNING in `ViewComponent::TestHelpers`: You must add `capybara` to your Gemfile to use Capybara assertions."
+      # We don't have a test case for running an application without capybara installed.
+      # It's probably fine to leave this without coverage.
+      # :nocov:
+      warn "WARNING in `ViewComponent::TestHelpers`: You must add `capybara` to your Gemfile to use Capybara assertions." if ENV["DEBUG"]
+      # :nocov:
     end
 
     attr_reader :rendered_component
 
     def render_inline(component, **args, &block)
-      @rendered_component = controller.view_context.render(component, args, &block)
+      @rendered_component =
+        if Rails.version.to_f >= 6.1
+          controller.view_context.render(component, args, &block)
+        else
+          controller.view_context.render_component(component, &block)
+        end
 
       Nokogiri::HTML.fragment(@rendered_component)
     end

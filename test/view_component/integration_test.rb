@@ -281,6 +281,7 @@ class IntegrationTest < ActionDispatch::IntegrationTest
     get "/rails/view_components/no_layout/default"
 
     assert_select("div", "hello,world!")
+    refute_includes response.body, "ViewComponent - Test"
   end
 
   test "test preview renders application's layout by default" do
@@ -310,6 +311,11 @@ class IntegrationTest < ActionDispatch::IntegrationTest
 
     get "/rails/view_components/preview_component"
     assert_select "title", "Component Previews for preview_component"
+  end
+
+  test "test preview from multiple preview_paths" do
+    get "/rails/view_components/my_component_lib/default"
+    assert_select("div", "hello,world!")
   end
 
   test "renders collections" do
@@ -354,6 +360,17 @@ class IntegrationTest < ActionDispatch::IntegrationTest
     assert_select(".item.normal", count: 2)
 
     assert_select(".footer.text-blue h3", text: "This is the footer")
+
+    title_node = Nokogiri::HTML.fragment(response.body).css(".title").to_html
+    expected_title_html = "<div class=\"title\">\n    <p>This is my title!</p>\n  </div>"
+
+    assert_equal(title_node, expected_title_html)
+  end
+
+  test "renders empty slot without error" do
+    get "/empty_slot"
+
+    assert_response :success
   end
 
   if Rails.version.to_f >= 6.1
@@ -379,6 +396,83 @@ class IntegrationTest < ActionDispatch::IntegrationTest
     test "rendering component in a controller using #render_component_to_string" do
       get "/controller_to_string_render_component"
       assert_includes response.body, "bar"
+    end
+
+    test "rendering component in preview using #render_component and monkey patch disabled" do
+      with_render_monkey_patch_config(false) do
+        get "/rails/view_components/monkey_patch_disabled_component/default"
+        assert_includes response.body, "<div>hello,world!</div>"
+      end
+    end
+  end
+
+  test "renders the inline component preview examples with default behaviour and with their own templates" do
+    get "/rails/view_components/inline_component/default"
+    assert_select "input" do
+      assert_select "[name=?]", "name"
+    end
+
+    get "/rails/view_components/inline_component/inside_form"
+    assert_select "form" do
+      assert_select "p", "Inside Form"
+      assert_select "input[name=?]", "name"
+    end
+
+    get "/rails/view_components/inline_component/outside_form"
+    assert_select "div" do
+      assert_select "p", "Outside Form"
+      assert_select "input[name=?]", "name"
+    end
+  end
+
+  test "renders the preview example with its own template and a layout" do
+    get "/rails/view_components/my_component/inside_banner"
+    assert_includes response.body, "ViewComponent - Admin - Test"
+    assert_select ".banner" do
+      assert_select("div", "hello,world!")
+    end
+  end
+
+  test "renders an inline component preview using URL params and a template" do
+    get "/rails/view_components/inline_component/with_params?form_title=This is a test form"
+    assert_select "form" do
+      assert_select "p", "This is a test form"
+      assert_select "input[name=?]", "name"
+    end
+  end
+
+  test "renders the inline component using a non standard-located template" do
+    get "/rails/view_components/inline_component/with_non_standard_template"
+    assert_select "h1", "This is not a standard place to have a preview template"
+    assert_select "input[name=?]", "name"
+  end
+
+  test "renders an inline component preview using a HAML template" do
+    get "/rails/view_components/inline_component/with_haml"
+    assert_select "h1", "Some HAML here"
+    assert_select "input[name=?]", "name"
+  end
+
+  test "returns 404 when preview does not exist" do
+    assert_raises AbstractController::ActionNotFound do
+      get "/rails/view_components/missing_preview"
+    end
+  end
+
+  test "raises an error if the template is not present and the render_with_template method is used in the example" do
+    error = assert_raises ViewComponent::PreviewTemplateError do
+      get "/rails/view_components/inline_component/without_template"
+    end
+    assert_match /preview template for example without_template does not exist/, error.message
+  end
+
+  test "renders a preview template using HAML, params from URL, custom template and locals" do
+    get "/rails/view_components/inline_component/with_several_options?form_title=Title from params"
+
+    assert_select "form" do
+      assert_select "h1", "Title from params"
+      assert_select "input[name=?]", "name"
+      assert_select "input[value=?]", "Send this form!"
     end
   end
 end

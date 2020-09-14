@@ -1,15 +1,12 @@
 # frozen_string_literal: true
 require "simplecov"
-require "simplecov-erb"
+require "simplecov-console"
 
 SimpleCov.start do
-  formatter SimpleCov::Formatter::MultiFormatter.new([
-    SimpleCov::Formatter::ERBFormatter,
-    SimpleCov::Formatter::HTMLFormatter
-  ])
-end
+  command_name "rails#{ENV["RAILS_VERSION"]}-ruby#{ENV["RUBY_VERSION"]}" if ENV["RUBY_VERSION"]
 
-SimpleCov.minimum_coverage 97 # TODO: Get to 100!
+  formatter SimpleCov::Formatter::Console
+end
 
 require "bundler/setup"
 require "pp"
@@ -40,4 +37,19 @@ def modify_file(file, content)
   ensure
     File.open(filename, "wb+") { |f| f.write(old_content) }
   end
+end
+
+def with_default_preview_layout(layout)
+  old_value = ViewComponent::Base.default_preview_layout
+  ViewComponent::Base.default_preview_layout = layout
+  yield
+  ViewComponent::Base.default_preview_layout = old_value
+end
+
+def with_render_monkey_patch_config(enabled)
+  old_default = ViewComponent::Base.render_monkey_patch_enabled
+  ViewComponent::Base.render_monkey_patch_enabled = enabled
+  yield
+ensure
+  ViewComponent::Base.render_monkey_patch_enabled = old_default
 end
