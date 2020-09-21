@@ -646,6 +646,7 @@ class ViewComponentTest < ViewComponent::TestCase
     assert_text("http://assets.example.com")
   end
 
+
   def test_inherited_component_inherits_template
     render_inline(InheritedTemplateComponent.new)
 
@@ -664,4 +665,5 @@ class ViewComponentTest < ViewComponent::TestCase
     assert_predicate InheritedInlineComponent, :compiled?
     assert_selector("input[type='text'][name='name']")
   end
+
 end
