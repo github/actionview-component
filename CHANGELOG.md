@@ -6,6 +6,12 @@
 
     *Francesco Boffa*
 
+## 2.22.1
+
+* Revert refactor that broke rendering for some users.
+
+    *Joel Hawksley*
+
 ## 2.22.0
 
 * Add #with_variant to enable inline component variant rendering without template files.
