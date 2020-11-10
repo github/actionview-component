@@ -5,12 +5,14 @@ require "active_support/configurable"
 require "view_component/collection"
 require "view_component/compile_cache"
 require "view_component/previewable"
+require "view_component/rescuable"
 require "view_component/slotable"
 
 module ViewComponent
   class Base < ActionView::Base
     include ActiveSupport::Configurable
     include ViewComponent::Previewable
+    include ViewComponent::Rescuable
 
     ViewContextCalledBeforeRenderError = Class.new(StandardError)
 

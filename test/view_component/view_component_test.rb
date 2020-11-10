@@ -671,4 +671,16 @@ class ViewComponentTest < ViewComponent::TestCase
     assert_predicate InheritedInlineComponent, :compiled?
     assert_selector("input[type='text'][name='name']")
   end
+
+  def test_errors_can_be_handled
+    render_inline(RescuedExceptionComponent.new)
+
+    assert_text("Something bad happened")
+  end
+
+  def test_errors_can_be_handled_inline
+    render_inline(RescuedExceptionComponent.new.with_variant(:inline))
+
+    assert_text("Something bad happened")
+  end
 end

@@ -86,6 +86,8 @@ module ViewComponent
           else
             call
           end
+        rescue Exception => exception
+          rescue_with_handler(exception) || raise
         end
       RUBY
 
