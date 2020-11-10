@@ -2,6 +2,10 @@
 
 ## master
 
+* Use ActiveSupport::Rescuable to handle exceptions while rendering.
+
+    *Francesco Boffa*
+
 ## 2.22.0
 
 * Add #with_variant to enable inline component variant rendering without template files.

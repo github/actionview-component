@@ -619,6 +619,24 @@ class UserComponent < ViewComponent::Base
 end
 ```
 
+### Handling errors
+
+An exception occurring in a small fragment of the user interface can potentially break an entire page.
+
+To prevent this you can use `rescue_from`, just like in a controller:
+
+```ruby
+class FailingComponent < ViewComponent::Base
+  rescue_from User::NotAuthorized, with: :deny_access
+
+  def deny_access
+    'You cannot look at this.'
+  end
+end
+```
+
+The error handler can also render a fallback component.
+
 ### Writing tests
 
 Unit test components directly, using the `render_inline` test helper, asserting against the rendered output.
@@ -1137,7 +1155,7 @@ ViewComponent is built by:
 |@johannesengl|@czj|@mrrooijen|@bradparker|@mattbrictson|
 |Berlin, Germany|Paris, France|The Netherlands|Brisbane, Australia|San Francisco|
 
-|<img src="https://avatars.githubusercontent.com/mixergtz?s=256" alt="mixergtz" width="128" />|<img src="https://avatars.githubusercontent.com/jules2689?s=256" alt="jules2689" width="128" />|<img src="https://avatars.githubusercontent.com/g13ydson?s=256" alt="g13ydson" width="128" />|<img src="https://avatars.githubusercontent.com/swanson?s=256" alt="swanson" width="128" />|
-|:---:|:---:|:---:|:---:|
-|@mixergtz|@jules2689|@g13ydson|@swanson|
-|Medellin, Colombia|Toronto, Canada|João Pessoa, Brazil|Indianapolis, IN|
+|<img src="https://avatars.githubusercontent.com/mixergtz?s=256" alt="mixergtz" width="128" />|<img src="https://avatars.githubusercontent.com/jules2689?s=256" alt="jules2689" width="128" />|<img src="https://avatars.githubusercontent.com/g13ydson?s=256" alt="g13ydson" width="128" />|<img src="https://avatars.githubusercontent.com/swanson?s=256" alt="swanson" width="128" />|<img src="https://avatars.githubusercontent.com/francescobbo?s=256" alt="francescobbo" width="128" />
+|:---:|:---:|:---:|:---:|:---:|
+|@mixergtz|@jules2689|@g13ydson|@swanson|@francescobbo|
+|Medellin, Colombia|Toronto, Canada|João Pessoa, Brazil|Indianapolis, IN|London|
