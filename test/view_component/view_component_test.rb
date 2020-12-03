@@ -671,4 +671,11 @@ class ViewComponentTest < ViewComponent::TestCase
     assert_predicate InheritedInlineComponent, :compiled?
     assert_selector("input[type='text'][name='name']")
   end
+
+  def test_cache_digest
+    render_inline(CacheComponent.new)
+
+    assert_text "cache_component:86b3c2843d4c0cff8a925eae1eb7353a"
+  end
+
 end

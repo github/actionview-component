@@ -52,7 +52,9 @@ module ViewComponent
       self.class.compile(raise_errors: true)
 
       @view_context = view_context
-      @lookup_context ||= view_context.lookup_context
+      @lookup_context ||= view_context.lookup_context.tap do |c|
+        c.view_paths.unshift(Rails.root.join("app/components"))
+      end
 
       # required for path helpers in older Rails versions
       @view_renderer ||= view_context.view_renderer
