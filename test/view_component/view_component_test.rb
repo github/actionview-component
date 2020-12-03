@@ -673,9 +673,10 @@ class ViewComponentTest < ViewComponent::TestCase
   end
 
   def test_cache_digest
-    render_inline(CacheComponent.new)
+    cache_key = render_inline(CacheComponent.new).text
 
-    assert_text "cache_component:86b3c2843d4c0cff8a925eae1eb7353a"
+    assert_includes cache_key, "cache-key"
+    assert_match(/\w{32}/, cache_key.sub("cache-key", ""))
   end
 
 end
