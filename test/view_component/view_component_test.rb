@@ -672,11 +672,14 @@ class ViewComponentTest < ViewComponent::TestCase
     assert_selector("input[type='text'][name='name']")
   end
 
-  def test_cache_digest
-    cache_key = render_inline(CacheComponent.new).text
+  if Rails.version.to_f >= 6.0
+    def test_cache_digest
+      cache_key = render_inline(CacheComponent.new).text
 
-    assert_includes cache_key, "cache-key"
-    assert_match(/\w{32}/, cache_key.sub("cache-key", ""))
+      assert_includes cache_key, "cache-key"
+
+      assert_match(/\w{32}/, cache_key.sub("cache-key", ""))
+    end
   end
 
 end
