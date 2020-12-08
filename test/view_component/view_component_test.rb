@@ -669,4 +669,15 @@ class ViewComponentTest < ViewComponent::TestCase
     assert_predicate InheritedInlineComponent, :compiled?
     assert_selector("input[type='text'][name='name']")
   end
+
+  if Rails.version.to_f >= 6.0
+    def test_cache_digest
+      cache_key = render_inline(CacheComponent.new).text
+
+      assert_includes cache_key, "cache-key"
+
+      assert_match(/\w{32}/, cache_key.sub("cache-key", ""))
+    end
+  end
+
 end

@@ -24,6 +24,9 @@ module ViewComponent
     class_attribute :slots
     self.slots = {}
 
+    class_attribute :vc_lookup_context
+    self.vc_lookup_context = ActionView::LookupContext.new(ActionView::PathSet.new([Rails.root.join("app/components")]), {}, [])
+
     # Entrypoint for rendering components.
     #
     # view_context: ActionView context from calling view
@@ -52,7 +55,7 @@ module ViewComponent
       self.class.compile(raise_errors: true)
 
       @view_context = view_context
-      @lookup_context ||= view_context.lookup_context
+      @lookup_context = vc_lookup_context
 
       # required for path helpers in older Rails versions
       @view_renderer ||= view_context.view_renderer
@@ -64,7 +67,7 @@ module ViewComponent
       @virtual_path ||= virtual_path
 
       # For template variants (+phone, +desktop, etc.)
-      @variant ||= @lookup_context.variants.first
+      @variant ||= view_context.lookup_context.variants.first
 
       # For caching, such as #cache_if
       @current_template = nil unless defined?(@current_template)
