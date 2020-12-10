@@ -449,6 +449,13 @@ class ViewComponentTest < ViewComponent::TestCase
     assert_selector("p", text: "Mints counter: 2")
   end
 
+  def test_render_collection_with_spacer
+    products = [OpenStruct.new(name: "Radio clock"), OpenStruct.new(name: "Mints"), OpenStruct.new(name: "Toys")]
+    render_inline(ProductComponent.with_collection(products, notice: "On sale", spacer_component: CollectionSpacerComponent))
+    assert_selector("#spacer-1", text: "Sample spacer", count: 1)
+    assert_selector("#spacer-2", text: "Sample spacer", count: 1)
+  end
+
   def test_render_collection_custom_collection_parameter_name
     coupons = [OpenStruct.new(percent_off: 20), OpenStruct.new(percent_off: 50)]
     render_inline(ProductCouponComponent.with_collection(coupons))
