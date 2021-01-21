@@ -570,4 +570,20 @@ class ViewComponentTest < ViewComponent::TestCase
     assert_predicate InheritedInlineComponent, :compiled?
     assert_selector("input[type='text'][name='name']")
   end
+
+  def test_block_passed_to_content_evaluated_only_if_parent_component_is_rendering
+    render_inline(ConditionalRenderComponent.new(should_render: true)) do |c|
+      c.content do
+        "Hello World"
+      end
+    end
+
+    assert_text("Hello World")
+
+    render_inline(ConditionalRenderComponent.new(should_render: false)) do |c|
+      c.content do
+        raise
+      end
+    end
+  end
 end

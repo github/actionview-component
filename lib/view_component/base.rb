@@ -69,7 +69,7 @@ module ViewComponent
       @current_template = self
 
       # Assign captured content passed to component as a block to @content
-      @content = view_context.capture(self, &block) if block_given?
+      @_content = view_context.capture(self, &block) if block_given?
 
       before_render
 
@@ -92,6 +92,16 @@ module ViewComponent
 
     def render?
       true
+    end
+
+    def content(&block)
+      if block_given?
+        @block_from_content = block
+      else
+        @_content ||= if defined?(@block_from_content)
+          @block_from_content.call
+        end
+      end
     end
 
     def initialize(*); end
@@ -167,7 +177,7 @@ module ViewComponent
       @request ||= controller.request
     end
 
-    attr_reader :content, :view_context
+    attr_reader :view_context
 
     # The controller used for testing components.
     # Defaults to ApplicationController. This should be set early
