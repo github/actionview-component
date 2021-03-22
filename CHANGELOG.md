@@ -108,6 +108,10 @@
 
     *Max Beizer*
 
+* Use ActiveSupport::Rescuable to handle exceptions while rendering.
+
+    *Francesco Boffa*
+
 ## 2.22.1
 
 * Revert refactor that broke rendering for some users.

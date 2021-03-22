@@ -5,6 +5,7 @@ require "active_support/configurable"
 require "view_component/collection"
 require "view_component/compile_cache"
 require "view_component/previewable"
+require "view_component/rescuable"
 require "view_component/slotable"
 require "view_component/slotable_v2"
 
@@ -12,6 +13,7 @@ module ViewComponent
   class Base < ActionView::Base
     include ActiveSupport::Configurable
     include ViewComponent::Previewable
+    include ViewComponent::Rescuable
     include ViewComponent::SlotableV2
 
     ViewContextCalledBeforeRenderError = Class.new(StandardError)
@@ -89,6 +91,9 @@ module ViewComponent
       else
         ""
       end
+
+    rescue Exception => exception # rubocop:disable Lint/RescueException
+      rescue_with_handler(exception) || raise
     ensure
       @current_template = old_current_template
     end

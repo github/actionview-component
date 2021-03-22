@@ -662,6 +662,24 @@ class UserComponent < ViewComponent::Base
 end
 ```
 
+### Handling errors
+
+An exception occurring in a small fragment of the user interface can potentially break an entire page.
+
+To prevent this you can use `rescue_from`, just like in a controller:
+
+```ruby
+class FailingComponent < ViewComponent::Base
+  rescue_from User::NotAuthorized, with: :deny_access
+
+  def deny_access
+    'You cannot look at this.'
+  end
+end
+```
+
+The error handler can also render a fallback component.
+
 #### Using nested URL helpers
 
 Rails nested URL helpers implicitly depend on the current `request` in certain cases. Since ViewComponent is built to enable reusing components in different contexts, nested URL helpers should be passed their options explicitly:
@@ -1234,7 +1252,7 @@ ViewComponent is built by:
 |@mixergtz|@jules2689|@g13ydson|@swanson|@bobmaerten|
 |Medellin, Colombia|Toronto, Canada|João Pessoa, Brazil|Indianapolis, IN|Valenciennes, France|
 
-|<img src="https://avatars.githubusercontent.com/nshki?s=256" alt="nshki" width="128" />|
-|:---:|
-|@nshki|
-|Los Angeles, CA|
+|<img src="https://avatars.githubusercontent.com/nshki?s=256" alt="nshki" width="128" />|<img src="https://avatars.githubusercontent.com/francescobbo?s=256" alt="francescobbo" width="128" />|
+|:---:|:---:|
+|@nshki|@francescobbo|
+|Los Angeles, CA|London|
