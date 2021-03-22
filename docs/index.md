@@ -1,12 +1,14 @@
 A framework for building reusable, testable & encapsulated view components in Ruby on Rails.
 
+[View on GitHub →](https://github.com/github/view_component)
+
 ## Design philosophy
 
 ViewComponent is designed to integrate as seamlessly as possible [with Rails](https://rubyonrails.org/doctrine/), with the [least surprise](https://www.artima.com/intv/ruby4.html).
 
 ## Compatibility
 
-ViewComponent is [supported natively](https://edgeguides.rubyonrails.org/layouts_and_rendering.html#rendering-objects) in Rails 6.1, and compatible with Rails 5.0+ via an included [monkey patch](https://github.com/github/view_component/blob/master/lib/view_component/render_monkey_patch.rb).
+ViewComponent is [supported natively](https://edgeguides.rubyonrails.org/layouts_and_rendering.html#rendering-objects) in Rails 6.1, and compatible with Rails 5.0+ via an included [monkey patch](https://github.com/github/view_component/blob/main/lib/view_component/render_monkey_patch.rb).
 
 ViewComponent is tested for compatibility [with combinations of](https://github.com/github/view_component/blob/22e3d4ccce70d8f32c7375e5a5ccc3f70b22a703/.github/workflows/ruby_on_rails.yml#L10-L11) Ruby 2.4+ and Rails 5+.
 
@@ -46,7 +48,7 @@ ViewComponents use a standard Ruby initializer that clearly defines what is need
 
 #### Performance
 
-Based on our [benchmarks](performance/benchmark.rb), ViewComponents are ~10x faster than partials.
+Based on our [benchmarks](https://github.com/github/view_component/blob/main/performance/benchmark.rb), ViewComponents are ~10x faster than partials.
 
 #### Standards
 
@@ -73,7 +75,8 @@ Use the component generator to create a new ViewComponent.
 The generator accepts a component name and a list of arguments:
 
 ```bash
-bin/rails generate component Example title content
+bin/rails generate component Example title
+
       invoke  test_unit
       create  test/components/example_component_test.rb
       create  app/components/example_component.rb
@@ -85,24 +88,30 @@ ViewComponent includes template generators for the `erb`, `haml`, and `slim` tem
 The template engine can also be passed as an option to the generator:
 
 ```bash
-bin/rails generate component Example title content --template-engine slim
+bin/rails generate component Example title --template-engine slim
+```
+
+To generate a [preview](#previewing-components), pass the `--preview` option:
+
+```bash
+bin/rails generate component Example title --preview
 ```
 
 #### Implementation
 
 A ViewComponent is a Ruby file and corresponding template file with the same base name:
 
-`app/components/test_component.rb`:
+`app/components/example_component.rb`:
 
 ```ruby
-class TestComponent < ViewComponent::Base
+class ExampleComponent < ViewComponent::Base
   def initialize(title:)
     @title = title
   end
 end
 ```
 
-`app/components/test_component.html.erb`:
+`app/components/example_component.html.erb`:
 
 ```erb
 <span title="<%= @title %>"><%= content %></span>
@@ -111,7 +120,7 @@ end
 Rendered in a view as:
 
 ```erb
-<%= render(TestComponent.new(title: "my title")) do %>
+<%= render(ExampleComponent.new(title: "my title")) do %>
   Hello, World!
 <% end %>
 ```
@@ -122,152 +131,66 @@ Returning:
 <span title="my title">Hello, World!</span>
 ```
 
-#### Content Areas
+#### Passing content to ViewComponents
 
 Content passed to a ViewComponent as a block is captured and assigned to the `content` accessor.
 
-ViewComponents can declare additional content areas. For example:
+ViewComponents also accept content through Slots, enabling multiple blocks of content to be passed to a single ViewComponent.
 
-`app/components/modal_component.rb`:
+Slots are defined with `renders_one` and `renders_many`:
 
-```ruby
-class ModalComponent < ViewComponent::Base
-  with_content_areas :header, :body
-end
-```
+`renders_one` defines a slot that will be rendered at most once per component: `renders_one :header`
 
-`app/components/modal_component.html.erb`:
+`renders_many` defines a slot that can be rendered multiple times per-component: `renders_many :blog_posts`
 
-```erb
-<div class="modal">
-  <div class="header"><%= header %></div>
-  <div class="body"><%= body %></div>
-</div>
-```
+_To view documentation for content_areas (soon to be deprecated) and the original implementation of Slots, see [/content_areas](/content_areas) and [/slots_v1](/slots_v1)._
 
-Rendered in a view as:
+##### Defining slots
 
-```erb
-<%= render(ModalComponent.new) do |component| %>
-  <% component.with(:header) do %>
-    Hello Jane
-  <% end %>
-  <% component.with(:body) do %>
-    <p>Have a great day.</p>
-  <% end %>
-<% end %>
-```
+Slots come in three forms:
 
-Returning:
+- [Delegate slots](#delegate-slots) render other components.
+- [Lambda slots](#lambda-slots) render strings or initialized components.
+- [Pass through slots](#pass-through-slots)  pass content directly to another component.
 
-```html
-<div class="modal">
-  <div class="header">Hello Jane</div>
-  <div class="body"><p>Have a great day.</p></div>
-</div>
-```
+##### Delegate slots
 
-#### Slots (experimental)
+Delegate slots delegate to another component:
 
-_Slots are currently under development as a successor to Content Areas. The Slot APIs should be considered unfinished and subject to breaking changes in non-major releases of ViewComponent._
-
-Slots enable multiple blocks of content to be passed to a single ViewComponent, reducing the need for sub-components (e.g. ModalHeader, ModalBody).
-
-By default, slots can be rendered once per component. They provide an accessor with the name of the slot (`#header`) that returns an instance of `ViewComponent::Slot`, etc.
-
-Slots declared with `collection: true` can be rendered multiple times. They provide an accessor with the pluralized name of the slot (`#rows`), which is an Array of `ViewComponent::Slot` instances.
-
-To learn more about the design of the Slots API, see [#348](https://github.com/github/view_component/pull/348) and [#325](https://github.com/github/view_component/discussions/325).
-
-##### Defining Slots
-
-Slots are defined by `with_slot`:
-
-`with_slot :header`
-
-To define a collection slot, add `collection: true`:
-
-`with_slot :row, collection: true`
-
-To define a slot with a custom Ruby class, pass `class_name`:
-
-`with_slot :body, class_name: 'BodySlot'`
-
-_Note: Slot classes must be subclasses of `ViewComponent::Slot`._
-
-##### Example ViewComponent with Slots
-
-`# box_component.rb`
+`# blog_component.rb`
 
 ```ruby
-class BoxComponent < ViewComponent::Base
-  include ViewComponent::Slotable
+class BlogComponent < ViewComponent::Base
+  # Since `HeaderComponent` is nested inside of this component, we have to
+  # reference it as a string instead of a class name.
+  renders_one :header, "HeaderComponent"
 
-  with_slot :body, :footer
-  with_slot :header, class_name: "Header"
-  with_slot :row, collection: true, class_name: "Row"
+  # `PostComponent` is defined in another file, so we can refer to it by class name.
+  renders_many :posts, PostComponent
 
-  class Header < ViewComponent::Slot
-    def initialize(classes: "")
+  class HeaderComponent < ViewComponent::Base
+    attr_reader :classes
+
+    def initialize(classes:)
       @classes = classes
     end
 
-    def classes
-      "Box-header #{@classes}"
-    end
-  end
-
-  class Row < ViewComponent::Slot
-    def initialize(theme: :gray)
-      @theme = theme
-    end
-
-    def theme_class_name
-      case @theme
-      when :gray
-        "Box-row--gray"
-      when :hover_gray
-        "Box-row--hover-gray"
-      when :yellow
-        "Box-row--yellow"
-      when :blue
-        "Box-row--blue"
-      when :hover_blue
-        "Box-row--hover-blue"
-      else
-        "Box-row--gray"
-      end
+    def call
+      content_tag :h1, content, { class: classes }
     end
   end
 end
 ```
 
-`# box_component.html.erb`
+`# blog_component.html.erb`
 
 ```erb
-<div class="Box">
-  <% if header %>
-    <div class="<%= header.classes %>">
-      <%= header.content %>
-    </div>
-  <% end %>
-  <% if body %>
-    <div class="Box-body">
-      <%= body.content %>
-    </div>
-  <% end %>
-  <% if rows.any? %>
-    <ul>
-      <% rows.each do |row| %>
-        <li class="Box-row <%= row.theme_class_name %>">
-          <%= row.content %>
-        </li>
-      <% end %>
-    </ul>
-  <% end %>
-  <% if footer %>
-    <div class="Box-footer">
-      <%= footer.content %>
+<div>
+  <%= header %> <!-- render the header component -->
+
+  <% posts.each do |post| %>
+    <div class="blog-post-wrapper">
+      <%= post %> <!-- render an individual post -->
     </div>
   <% end %>
 </div>
@@ -276,22 +199,121 @@ end
 `# index.html.erb`
 
 ```erb
-<%= render(BoxComponent.new) do |component| %>
-  <% component.slot(:header, classes: "my-class-name") do %>
-    This is my header!
+<%= render BlogComponent.new do |c| %>
+  <% c.header(classes: "") do %>
+    <%= link_to "My Site", root_path %>
   <% end %>
-  <% component.slot(:body) do %>
-    This is the body.
+
+  <%= c.post(title: "My blog post") do %>
+    Really interesting stuff.
   <% end %>
-  <% component.slot(:row) do %>
-    Row one
+
+  <%= c.post(title: "Another post!") do %>
+    Blog every day.
   <% end %>
-  <% component.slot(:row, theme: :yellow) do %>
-    Yellow row
+<% end %>
+```
+
+##### Lambda Slots
+
+Lambda slots render their return value. Lambda slots are useful for working with helpers like `content_tag` or as wrappers for another component with specific default values.
+
+```ruby
+class BlogComponent < ViewComponent::Base
+  # Renders the returned string
+  renders_one :header, -> (classes:) do
+    content_tag :h1 do
+      link_to title, root_path, { class: classes }
+    end
+  end
+
+  # Returns a component that will be rendered in that slot with a default argument.
+  renders_many :posts, -> (title:, classes:) do
+    PostComponent.new(title: title, classes: "my-default-class " + classes)
+  end
+end
+```
+
+##### Pass through slots
+
+Pass through slots capture content passed with a block.
+
+Define a pass through slot by omitting the second argument to `renders_one` and `renders_many`:
+
+```ruby
+# blog_component.rb
+class BlogComponent < ViewComponent::Base
+  renders_one :header
+  renders_many :posts
+end
+```
+
+`# blog_component.html.erb`
+
+```erb
+<div>
+  <h1><%= header %></h1>
+
+  <%= posts %>
+</div>
+```
+
+`# index.html.erb`
+
+```erb
+<div>
+  <%= render BlogComponent.new do |c| %>
+    <%= c.header(classes: '') do %>
+      <%= link_to "My blog", root_path %>
+    <% end %>
+
+    <% @posts.each do |post| %>
+      <%= c.post(post: post) %>
+    <% end %>
   <% end %>
-  <% component.slot(:footer) do %>
-    This is the footer.
+</div>
+```
+
+##### Rendering Collections
+
+Collection slots (declared with `renders_many`) can also be passed a collection.
+
+e.g.
+
+`# navigation_component.rb`
+
+```ruby
+class NavigationComponent < ViewComponent::Base
+  renders_many :links, "LinkComponent"
+
+  class LinkComponent < ViewComponent::Base
+    def initialize(name:, href:)
+      @name = name
+      @href = href
+    end
+  end
+end
+```
+
+`# navigation_component.html.erb`
+
+```erb
+<div>
+  <% links.each do |link| %>
+    <%= link %>
   <% end %>
+</div>
+```
+
+`# index.html.erb`
+
+```erb
+<%= render(NavigationComponent.new) do |c| %>
+  <%= c.links([
+    { name: "Home", href: "/" },
+    { name: "Pricing", href: "/pricing" },
+    { name: "Sign Up", href: "/sign-up" },
+  ]) %>
 <% end %>
 ```
 
@@ -335,6 +357,27 @@ And render them `with_variant`:
 # output: <%= link_to "Phone", phone_path %>
 ```
 
+_**Note**: `call_*` methods must be public._
+
+### Validations
+
+ViewComponent does not include support for validations. However, it can be added by using `ActiveModel::Validations`:
+
+```ruby
+class ExampleComponent < ViewComponent::Base
+  include ActiveModel::Validations
+
+  # Requires that a content block be passed to the component
+  validate :content, presence: true
+
+  def before_render
+    validate!
+  end
+end
+```
+
+_Note: Using validations in this manner can lead to runtime exceptions. Use them wisely._
+
 ### Template Inheritance
 
 Components that subclass another component inherit the parent component's
@@ -358,8 +401,8 @@ The simplest option is to place the view next to the Ruby component:
 ```console
 app/components
 ├── ...
-├── test_component.rb
-├── test_component.html.erb
+├── example_component.rb
+├── example_component.html.erb
 ├── ...
 ```
 
@@ -381,7 +424,7 @@ app/components
 To generate a component with a sidecar directory, use the `--sidecar` flag:
 
 ```console
-bin/rails generate component Example title content --sidecar
+bin/rails generate component Example title --sidecar
       invoke  test_unit
       create  test/components/example_component_test.rb
       create  app/components/example_component.rb
@@ -470,14 +513,14 @@ end
 
 _To assert that a component has not been rendered, use `refute_component_rendered` from `ViewComponent::TestHelpers`._
 
-### `before_render`
+### `#before_render`
 
-Components can define a `before_render` method to be called before a component is rendered, when `helpers` is able to be used:
+ViewComponents can define a `before_render` method to be called before a component is rendered, when `helpers` is able to be used:
 
-`app/components/confirm_email_component.rb`
+`app/components/example_component.rb`
 
 ```ruby
-class MyComponent < ViewComponent::Base
+class ExampleComponent < ViewComponent::Base
   def before_render
     @my_icon = helpers.star_icon
   end
@@ -637,6 +680,18 @@ end
 
 The error handler can also render a fallback component.
 
+#### Using nested URL helpers
+
+Rails nested URL helpers implicitly depend on the current `request` in certain cases. Since ViewComponent is built to enable reusing components in different contexts, nested URL helpers should be passed their options explicitly:
+
+```ruby
+# bad
+edit_user_path # implicitly depends on current request to provide `user`
+
+# good
+edit_user_path(user: current_user)
+```
+
 ### Writing tests
 
 Unit test components directly, using the `render_inline` test helper, asserting against the rendered output.
@@ -646,20 +701,24 @@ Capybara matchers are available if the gem is installed:
 ```ruby
 require "view_component/test_case"
 
-class MyComponentTest < ViewComponent::TestCase
+class ExampleComponentTest < ViewComponent::TestCase
   def test_render_component
-    render_inline(TestComponent.new(title: "my title")) { "Hello, World!" }
+    render_inline(ExampleComponent.new(title: "my title")) { "Hello, World!" }
 
     assert_selector("span[title='my title']", text: "Hello, World!")
+    # or, to just assert against the text:
+    assert_text("Hello, World!")
   end
 end
 ```
+
+_Note: `assert_selector` only matches on visible elements by default. To match on hidden elements, add `visible: false`. See the [Capybara documentation](https://rubydoc.info/github/jnicklas/capybara/Capybara/Node/Matchers) for more details._
 
 In the absence of `capybara`, assert against the return value of `render_inline`, which is an instance of `Nokogiri::HTML::DocumentFragment`:
 
 ```ruby
 def test_render_component
-  result = render_inline(TestComponent.new(title: "my title")) { "Hello, World!" }
+  result = render_inline(ExampleComponent.new(title: "my title")) { "Hello, World!" }
 
   assert_includes result.css("span[title='my title']").to_html, "Hello, World!"
 end
@@ -669,7 +728,7 @@ Alternatively, assert against the raw output of the component, which is exposed 
 
 ```ruby
 def test_render_component
-  render_inline(TestComponent.new(title: "my title")) { "Hello, World!" }
+  render_inline(ExampleComponent.new(title: "my title")) { "Hello, World!" }
 
   assert_includes rendered_component, "Hello, World!"
 end
@@ -697,7 +756,7 @@ Use the `with_variant` helper to test specific variants:
 ```ruby
 def test_render_component_for_tablet
   with_variant :tablet do
-    render_inline(TestComponent.new(title: "my title")) { "Hello, tablets!" }
+    render_inline(ExampleComponent.new(title: "my title")) { "Hello, tablets!" }
 
     assert_selector("span[title='my title']", text: "Hello, tablets!")
   end
@@ -706,22 +765,26 @@ end
 
 ### Previewing Components
 
-`ViewComponent::Preview`, like `ActionMailer::Preview`, provides a way to preview components in isolation:
+`ViewComponent::Preview`, like `ActionMailer::Preview`, provides a quick way to preview components in isolation.
 
-`test/components/previews/test_component_preview.rb`
+_For a more interactive experience, consider using [ViewComponent::Storybook](https://github.com/jonspalmer/view_component_storybook)._
+
+`ViewComponent::Preview`s are defined as:
+
+`test/components/previews/example_component_preview.rb`
 
 ```ruby
-class TestComponentPreview < ViewComponent::Preview
+class ExampleComponentPreview < ViewComponent::Preview
   def with_default_title
-    render(TestComponent.new(title: "Test component default"))
+    render(ExampleComponent.new(title: "Example component default"))
   end
 
   def with_long_title
-    render(TestComponent.new(title: "This is a really long title to see how the component renders this"))
+    render(ExampleComponent.new(title: "This is a really long title to see how the component renders this"))
   end
 
   def with_content_block
-    render(TestComponent.new(title: "This component accepts a block of content")) do
+    render(ExampleComponent.new(title: "This component accepts a block of content")) do
       tag.div do
         content_tag(:span, "Hello")
       end
@@ -730,23 +793,23 @@ class TestComponentPreview < ViewComponent::Preview
 end
 ```
 
-Which generates <http://localhost:3000/rails/view_components/test_component/with_default_title>,
-<http://localhost:3000/rails/view_components/test_component/with_long_title>,
-and <http://localhost:3000/rails/view_components/test_component/with_content_block>.
+Which generates <http://localhost:3000/rails/view_components/example_component/with_default_title>,
+<http://localhost:3000/rails/view_components/example_component/with_long_title>,
+and <http://localhost:3000/rails/view_components/example_component/with_content_block>.
 
 It's also possible to set dynamic values from the params by setting them as arguments:
 
-`test/components/previews/test_component_preview.rb`
+`test/components/previews/example_component_preview.rb`
 
 ```ruby
-class TestComponentPreview < ViewComponent::Preview
-  def with_dynamic_title(title: "Test component default")
-    render(TestComponent.new(title: title))
+class ExampleComponentPreview < ViewComponent::Preview
+  def with_dynamic_title(title: "Example component default")
+    render(ExampleComponent.new(title: title))
   end
 end
 ```
 
-Which enables passing in a value with <http://localhost:3000/rails/components/test_component/with_dynamic_title?title=Custom+title>.
+Which enables passing in a value with <http://localhost:3000/rails/view_components/example_component/with_dynamic_title?title=Custom+title>.
 
 The `ViewComponent::Preview` base class includes
 [`ActionView::Helpers::TagHelper`](https://api.rubyonrails.org/classes/ActionView/Helpers/TagHelper.html), which provides the [`tag`](https://api.rubyonrails.org/classes/ActionView/Helpers/TagHelper.html#method-i-tag)
@@ -754,10 +817,10 @@ and [`content_tag`](https://api.rubyonrails.org/classes/ActionView/Helpers/TagHe
 
 Previews use the application layout by default, but can use a specific layout with the `layout` option:
 
-`test/components/previews/test_component_preview.rb`
+`test/components/previews/example_component_preview.rb`
 
 ```ruby
-class TestComponentPreview < ViewComponent::Preview
+class ExampleComponentPreview < ViewComponent::Preview
   layout "admin"
 
   ...
@@ -844,7 +907,7 @@ class CellComponentPreview < ViewComponent::Preview
 end
 ```
 
-Which enables passing in a value with <http://localhost:3000/rails/components/cell_component/default?title=Custom+title&subtitle=Another+subtitle>.
+Which enables passing in a value with <http://localhost:3000/rails/view_components/cell_component/default?title=Custom+title&subtitle=Another+subtitle>.
 
 #### Configuring preview controller
 
@@ -856,14 +919,34 @@ Previews can be extended to allow users to add authentication, authorization, be
 config.view_component.preview_controller = "MyPreviewController"
 ```
 
-#### Configuring TestController
+### Configuring the controller used in tests
 
-Component tests assume the existence of an `ApplicationController` class, which be can be configured using the `test_controller` option:
-
-`config/application.rb`
+Component tests assume the existence of an `ApplicationController` class, which can be configured globally using the `test_controller` option:
 
 ```ruby
 config.view_component.test_controller = "BaseController"
+```
+
+To configure the controller used for a test case, use `with_controller_class` from `ViewComponent::TestHelpers`.
+
+```ruby
+class ExampleComponentTest < ViewComponent::TestCase
+  def test_component_in_public_controller
+    with_controller_class PublicController do
+      render_inline ExampleComponent.new
+
+      assert_text "foo"
+    end
+  end
+
+  def test_component_in_authenticated_controller
+    with_controller_class AuthenticatedController do
+      render_inline ExampleComponent.new
+
+      assert_text "bar"
+    end
+  end
+end
 ```
 
 ### Setting up RSpec
@@ -922,7 +1005,7 @@ function importAll(r) {
   r.keys().forEach(r)
 }
 
-importAll(require.context("../components", true, /_component.js$/))
+importAll(require.context("../components", true, /[_\/]component\.js$/))
 ```
 
 Any file with the `_component.js` suffix (such as `app/components/widget_component.js`) will be compiled into the Webpack bundle. If that file itself imports another file, for example `app/components/widget_component.css`, it will also be compiled and bundled into Webpack's output stylesheet if Webpack is being used for styles.
@@ -1023,11 +1106,11 @@ In Stimulus, create a 1:1 mapping between a Stimulus controller and a component.
 
 ```js
 const application = Application.start()
-const context = require.context("controllers", true, /.js$/)
-const context_components = require.context("../../components", true, /_controller.js$/)
+const context = require.context("controllers", true, /\.js$/)
+const contextComponents = require.context("../../components", true, /_controller\.js$/)
 application.load(
   definitionsFromContext(context).concat(
-    definitionsFromContext(context_components)
+    definitionsFromContext(contextComponents)
   )
 )
 ```
@@ -1065,7 +1148,7 @@ app/components
 
 ## Known issues
 
-### form_for compatiblilty
+### form_for compatibility
 
 ViewComponent is [not currently compatible](https://github.com/github/view_component/issues/241) with `form_for` helpers.
 
@@ -1087,6 +1170,15 @@ ViewComponent is far from a novel idea! Popular implementations of view componen
 - [dry-rb/dry-view](https://github.com/dry-rb/dry-view)
 - [komposable/komponent](https://github.com/komposable/komponent)
 - [activeadmin/arbre](https://github.com/activeadmin/arbre)
+
+## ViewComponent libraries
+
+- [Primer ViewComponents](https://primer.style/view-components/)
+
+## Frameworks using ViewComponent
+
+- [Motion](https://github.com/unabridged/motion)
+- [StimulusReflex](https://docs.stimulusreflex.com/)
 
 ## Resources
 
@@ -1155,7 +1247,12 @@ ViewComponent is built by:
 |@johannesengl|@czj|@mrrooijen|@bradparker|@mattbrictson|
 |Berlin, Germany|Paris, France|The Netherlands|Brisbane, Australia|San Francisco|
 
-|<img src="https://avatars.githubusercontent.com/mixergtz?s=256" alt="mixergtz" width="128" />|<img src="https://avatars.githubusercontent.com/jules2689?s=256" alt="jules2689" width="128" />|<img src="https://avatars.githubusercontent.com/g13ydson?s=256" alt="g13ydson" width="128" />|<img src="https://avatars.githubusercontent.com/swanson?s=256" alt="swanson" width="128" />|<img src="https://avatars.githubusercontent.com/francescobbo?s=256" alt="francescobbo" width="128" />
+|<img src="https://avatars.githubusercontent.com/mixergtz?s=256" alt="mixergtz" width="128" />|<img src="https://avatars.githubusercontent.com/jules2689?s=256" alt="jules2689" width="128" />|<img src="https://avatars.githubusercontent.com/g13ydson?s=256" alt="g13ydson" width="128" />|<img src="https://avatars.githubusercontent.com/swanson?s=256" alt="swanson" width="128" />|<img src="https://avatars.githubusercontent.com/bobmaerten?s=256" alt="bobmaerten" width="128" />|
 |:---:|:---:|:---:|:---:|:---:|
-|@mixergtz|@jules2689|@g13ydson|@swanson|@francescobbo|
-|Medellin, Colombia|Toronto, Canada|João Pessoa, Brazil|Indianapolis, IN|London|
+|@mixergtz|@jules2689|@g13ydson|@swanson|@bobmaerten|
+|Medellin, Colombia|Toronto, Canada|João Pessoa, Brazil|Indianapolis, IN|Valenciennes, France|
+
+|<img src="https://avatars.githubusercontent.com/nshki?s=256" alt="nshki" width="128" />|<img src="https://avatars.githubusercontent.com/francescobbo?s=256" alt="francescobbo" width="128" />|
+|:---:|:---:|
+|@nshki|@francescobbo|
+|Los Angeles, CA|London|
