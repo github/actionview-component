@@ -12,11 +12,6 @@ module ViewComponent
   class Base < ActionView::Base
     include ActiveSupport::Configurable
     include ViewComponent::Previewable
-
-    ViewContextCalledBeforeRenderError = Class.new(StandardError)
-
-    RESERVED_PARAMETER = :content
-
     # For CSRF authenticity tokens in forms
     delegate :form_authenticity_token, :protect_against_forgery?, :config, to: :helpers
 
@@ -84,7 +79,6 @@ module ViewComponent
       before_render
 
       if render?
-        render_template_for(@variant)
       else
         ""
       end
@@ -130,7 +124,7 @@ module ViewComponent
       @helpers ||= controller.view_context
     end
 
-    # Exposes .virutal_path as an instance method
+    # Exposes .virtual_path as an instance method
     def virtual_path
       self.class.virtual_path
     end
@@ -205,6 +199,8 @@ module ViewComponent
     class << self
       attr_accessor :source_location, :virtual_path
 
+      end
+
       # Render a component collection.
       def with_collection(collection, **args)
         Collection.new(self, collection, **args)
@@ -246,9 +242,6 @@ module ViewComponent
       # Do as much work as possible in this step, as doing so reduces the amount
       # of work done each time a component is rendered.
       def compile(raise_errors: false)
-        template_compiler.compile(raise_errors: raise_errors)
-      end
-
       def template_compiler
         @_template_compiler ||= Compiler.new(self)
       end
@@ -267,6 +260,11 @@ module ViewComponent
       end
 
       def with_content_areas(*areas)
+        ActiveSupport::Deprecation.warn(
+          "`with_content_areas` is deprecated and will be removed in ViewComponent v3.0.0.\n" \
+          "Use slots (https://viewcomponent.org/guide/slots.html) instead."
+        )
+
         if areas.include?(:content)
           raise ArgumentError.new ":content is a reserved content area name. Please use another name, such as ':body'"
         end
@@ -324,31 +322,6 @@ module ViewComponent
           "public ViewComponent method."
         )
       end
-
-      def collection_parameter
-        if provided_collection_parameter
-          provided_collection_parameter
-        else
-          name && name.demodulize.underscore.chomp("_component").to_sym
-        end
-      end
-
-      def collection_counter_parameter
-        "#{collection_parameter}_counter".to_sym
-      end
-
-      def counter_argument_present?
-        instance_method(:initialize).parameters.map(&:second).include?(collection_counter_parameter)
-      end
-
-      private
-
-      def initialize_parameter_names
-        initialize_parameters.map(&:last)
-      end
-
-      def initialize_parameters
-        instance_method(:initialize).parameters
       end
 
       def provided_collection_parameter

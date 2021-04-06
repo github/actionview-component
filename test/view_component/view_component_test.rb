@@ -61,6 +61,17 @@ class ViewComponentTest < ViewComponent::TestCase
     assert_text("bar")
   end
 
+  def test_renders_haml_with_html_formatted_slot
+    render_inline(HamlHtmlFormattedSlotComponent.new)
+
+    assert_selector("p", text: "HTML Formatted one")
+    assert_selector("p", text: "HTML Formatted many", count: 2)
+
+    # ensure the content isn't rendered twice (once escaped, once not)
+    assert_no_text "<p>HTML Formatted one</p>"
+    assert_no_text "<p>HTML Formatted many</p>"
+  end
+
   def test_renders_slim_with_many_slots
     render_inline(SlimRendersManyComponent.new) do |c|
       c.slim_component(message: "Bar A") do
@@ -76,13 +87,13 @@ class ViewComponentTest < ViewComponent::TestCase
   end
 
   def test_renders_slim_with_html_formatted_slot
-    render_inline(SlimHTMLFormattedSlotComponent.new)
+    render_inline(SlimHtmlFormattedSlotComponent.new)
 
     assert_selector("p", text: "HTML Formatted")
   end
 
   def test_renders_slim_escaping_dangerous_html_assign
-    render_inline(SlimWithUnsafeHTMLComponent.new)
+    render_inline(SlimWithUnsafeHtmlComponent.new)
 
     refute_selector("script")
     assert_selector(".slim-div", text: "<script>alert('xss')</script>")
@@ -90,6 +101,13 @@ class ViewComponentTest < ViewComponent::TestCase
 
   def test_renders_haml_template
     render_inline(HamlComponent.new(message: "bar")) { "foo" }
+
+    assert_text("foo")
+    assert_text("bar")
+  end
+
+  def test_render_jbuilder_template
+    render_inline(JbuilderComponent.new(message: "bar")) { "foo" }
 
     assert_text("foo")
     assert_text("bar")
@@ -254,7 +272,7 @@ class ViewComponentTest < ViewComponent::TestCase
   end
 
   def test_renders_helper_method_within_nested_component
-    render_inline(HelpersContainerComponent.new)
+    render_inline(ContainerComponent.new)
 
     assert_text("Hello helper method")
   end
@@ -402,7 +420,7 @@ class ViewComponentTest < ViewComponent::TestCase
       render_inline(ValidationsComponent.new)
     end
 
-    assert_equal exception.message, "Validation failed: Content can't be blank"
+    assert_equal "Validation failed: Content can't be blank", exception.message
   end
 
   # TODO: Remove in v3.0.0
@@ -411,7 +429,7 @@ class ViewComponentTest < ViewComponent::TestCase
       render_inline(OldValidationsComponent.new)
     end
 
-    assert_equal exception.message, "Validation failed: Content can't be blank"
+    assert_equal "Validation failed: Content can't be blank", exception.message
   end
 
   def test_compiles_unrendered_component
@@ -617,6 +635,31 @@ class ViewComponentTest < ViewComponent::TestCase
         ProductReaderOopsComponent.with_collection(["foo"])
       )
     end
+  end
+
+  def test_render_multiple_templates
+    render_inline(MultipleTemplatesComponent.new(mode: :list))
+
+    assert_selector("li", text: "Apple")
+    assert_selector("li", text: "Banana")
+    assert_selector("li", text: "Pear")
+
+    render_inline(MultipleTemplatesComponent.new(mode: :summary))
+
+    assert_selector("div", text: "Apple, Banana, and Pear")
+  end
+
+  private
+
+  def modify_file(file, content)
+    filename = Rails.root.join(file)
+    old_content = File.read(filename)
+    begin
+      File.open(filename, "wb+") { |f| f.write(content) }
+      yield
+    ensure
+      File.open(filename, "wb+") { |f| f.write(old_content) }
+    end
 
     assert_match(/ProductReaderOopsComponent initializer is empty or invalid/, exception.message)
   end
@@ -640,55 +683,12 @@ class ViewComponentTest < ViewComponent::TestCase
   end
 
   def test_inherited_inline_component_inherits_inline_method
-    render_inline(InheritedInlineComponent.new)
+    render_inline(InlineInheritedComponent.new)
 
-    assert_predicate InheritedInlineComponent, :compiled?
+    assert_predicate InlineInheritedComponent, :compiled?
     assert_selector("input[type='text'][name='name']")
   end
 
-  def test_after_compile
-    assert_equal AfterCompileComponent.compiled_value, "Hello, World!"
 
-    render_inline(AfterCompileComponent.new)
-
-    assert_text "Hello, World!"
-  end
-
-  def test_does_not_render_passed_in_content_if_render_is_false
-    start_time = Time.now
-
-    render_inline ConditionalRenderComponent.new(should_render: false) do |c|
-      c.render SleepComponent.new(seconds: 5)
-    end
-
-    total = Time.now - start_time
-
-    assert total < 1
-  end
-
-  def test_collection_parameter_does_not_require_compile
-    dynamic_component = Class.new(ViewComponent::Base) do
-      with_collection_parameter :greeting
-
-      def initialize(greeting = "hello world")
-        @greeting = greeting
-      end
-
-      def call
-        content_tag :h1, @greeting
-      end
-    end
-
-    # Necessary because anonymous classes don't have a `name` property
-    Object.const_set("MY_COMPONENT", dynamic_component)
-
-    render_inline MY_COMPONENT.new
-    assert_selector "h1", text: "hello world"
-
-    render_inline MY_COMPONENT.with_collection(["hello world", "hello view component"])
-    assert_selector "h1", text: "hello world"
-    assert_selector "h1", text: "hello view component"
-  ensure
-    Object.send(:remove_const, "MY_COMPONENT")
   end
 end
