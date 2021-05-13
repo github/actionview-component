@@ -88,9 +88,8 @@ module ViewComponent
       @_content_evaluated = false
       @_render_in_block = block
 
-      before_render
-
       if render?
+        before_render
         render_template_for(@variant)
       else
         ""
