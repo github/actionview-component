@@ -151,18 +151,6 @@ class ViewComponentTest < ViewComponent::TestCase
     assert_text("bar")
   end
 
-  def test_renders_button_to_component
-    old_value = ActionController::Base.allow_forgery_protection
-    ActionController::Base.allow_forgery_protection = true
-
-    render_inline(ButtonToComponent.new) { "foo" }
-
-    assert_selector("form[class='button_to'][action='/'][method='post']")
-    assert_selector("input[type='hidden'][name='authenticity_token']", visible: false)
-
-    ActionController::Base.allow_forgery_protection = old_value
-  end
-
   def test_renders_component_with_variant
     with_variant :phone do
       render_inline(VariantsComponent.new)
@@ -305,12 +293,6 @@ class ViewComponentTest < ViewComponent::TestCase
 
   def test_renders_helper_method_through_proxy
     render_inline(HelpersProxyComponent.new)
-
-    assert_text("Hello helper method")
-  end
-
-  def test_renders_helper_method_within_nested_component
-    render_inline(ContainerComponent.new)
 
     assert_text("Hello helper method")
   end
