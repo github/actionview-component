@@ -3,13 +3,20 @@
 require "view_component/with_content_helper"
 
 module ViewComponent
-  class SlotV2
-    include ViewComponent::WithContentHelper
+  class SlotV2 < BasicObject
+    include ::ViewComponent::WithContentHelper
 
     attr_writer :_component_instance, :_content_block, :_content
 
     def initialize(parent)
       @parent = parent
+    end
+
+    # An instance of SlotV2 is not nil, even if @_component_instance might be
+    #
+    # Also, ActionView::OutputBuffer will not call #to_s if #nil? is true
+    def nil?
+      false
     end
 
     # Used to render the slot content in the template
@@ -30,7 +37,7 @@ module ViewComponent
 
       view_context = @parent.send(:view_context)
 
-      raise ArgumentError.new("Block provided after calling `with_content`. Use one or the other.") if defined?(@_content_block) && defined?(@_content_set_by_with_content)
+      ::Kernel.raise ::ArgumentError.new("Block provided after calling `with_content`. Use one or the other.") if defined?(@_content_block) && defined?(@_content_set_by_with_content)
 
       @content = if defined?(@_component_instance)
         if defined?(@_content_set_by_with_content)
