@@ -7,6 +7,10 @@ title: Changelog
 
 ## main
 
+* Validate collection parameter with Active Model attribute names
+
+    *Simon Fish*
+
 ## 2.35.0
 
 * Only load assets for Preview source highlighting if previews are enabled.
