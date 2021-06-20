@@ -12,11 +12,13 @@ module ViewComponent
 
       component.validate_collection_parameter!(validate_default: true)
 
-      @collection.map do |item|
-        content = component.new(**component_options(item, iterator)).render_in(view_context, &block)
-        iterator.iterate!
-        content
-      end.join.html_safe # rubocop:disable Rails/OutputSafety
+      view_context.capture do
+        @collection.map do |item|
+          content = component.new(**component_options(item, iterator)).render_in(view_context, &block)
+          iterator.iterate!
+          content
+        end.join.html_safe # rubocop:disable Rails/OutputSafety
+      end
     end
 
     private
