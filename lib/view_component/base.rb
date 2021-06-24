@@ -10,53 +10,6 @@ require "view_component/slotable"
 require "view_component/slotable_v2"
 require "view_component/with_content_helper"
 
-class ActionView::Base
-  attr_reader :children
-  attr_accessor :parent
-
-  def _prepare_context
-    @children = []
-    @parent = nil
-
-    super
-  end
-
-  def set_output_buffer(buf)
-    @output_buffer = buf
-  end
-
-  def output_buffer=(buf)
-    if parent.nil?
-      set_output_buffer_for_children(buf)
-    else
-      top_level_parent.set_output_buffer_for_children(buf)
-    end
-  end
-
-  def top_level_parent
-    return if parent.nil?
-    return @_top_level_parent if defined?(@_top_level_parent)
-
-    @_top_level_parent = begin
-      top_level = parent
-
-      while top_level.parent
-        top_level = top_level.parent
-      end
-
-      top_level
-    end
-  end
-
-  def set_output_buffer_for_children(buf)
-    set_output_buffer(buf)
-
-    children.each do |child|
-      child.set_output_buffer(buf)
-    end
-  end
-end
-
 module ViewComponent
   class Base < ActionView::Base
     include ActiveSupport::Configurable
