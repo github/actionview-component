@@ -33,6 +33,20 @@ def with_preview_paths(new_value)
   Rails.application.config.view_component.preview_paths = old_value
 end
 
+def with_locale(locale, default_locale = I18n.default_locale)
+  old_locale = I18n.locale
+  old_default_locale = I18n.default_locale
+  
+  begin
+    I18n.locale = locale
+    I18n.default_locale = default_locale
+    yield
+  ensure
+     I18n.locale = old_locale
+     I18n.default_locale = old_default_locale
+  end
+end
+
 def with_preview_route(new_value)
   old_value = Rails.application.config.view_component.preview_route
   Rails.application.config.view_component.preview_route = new_value

@@ -39,6 +39,7 @@ module ViewComponent
         # Remove existing compiled template methods,
         # as Ruby warns when redefining a method.
         method_name = call_method_name(template[:variant])
+
         component_class.send(:undef_method, method_name.to_sym) if component_class.instance_methods.include?(method_name.to_sym)
 
         component_class.class_eval <<-RUBY, template[:path], -1
@@ -125,9 +126,21 @@ module ViewComponent
 
         component_class._sidecar_files(extensions).each_with_object([]) do |path, memo|
           pieces = File.basename(path).split(".")
+
+          # if template is a localized file (ie file.country_code.html.erb)
+          # append locale inside variant and fix regional dash (pt-BR, en-GB...)
+          if pieces.length >= 4
+            variant = [
+              pieces.third.split("+").second,
+              pieces.second.underscore
+            ].compact.join('_')
+          else
+            variant = pieces.second.split("+").second&.to_sym
+          end
+
           memo << {
             path: path,
-            variant: pieces.second.split("+").second&.to_sym,
+            variant: variant,
             handler: pieces.last
           }
         end
