@@ -41,9 +41,8 @@ module ViewComponent
         method_name = call_method_name(template[:variant])
         component_class.send(:undef_method, method_name.to_sym) if component_class.instance_methods.include?(method_name.to_sym)
 
-        component_class.class_eval <<-RUBY, template[:path], -1
+        component_class.class_eval <<-RUBY, template[:path], 0
           def #{method_name}
-            @output_buffer = ActionView::OutputBuffer.new
             #{compiled_template(template[:path])}
           end
         RUBY
