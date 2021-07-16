@@ -7,6 +7,10 @@ title: Changelog
 
 ## main
 
+* Add render_xyz? slotable helpers.
+
+    *Joel Hawksley*
+
 * Update error messages to be more descriptive and helpful.
 
     *Joel Hawksley*
