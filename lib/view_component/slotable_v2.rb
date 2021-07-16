@@ -142,6 +142,19 @@ module ViewComponent
         register_slot(slot_name, collection: true, callable: callable)
       end
 
+      def renders_one?(slot_name)
+        registered_slots.dig(slot_name, :collection) == false
+      end
+
+      def renders_many?(slot_name)
+        registered_slots.dig(slot_name, :collection) == true
+      end
+
+      def renders_many_item?(slot_name)
+        plural_slot_name = ActiveSupport::Inflector.pluralize(slot_name).to_sym
+        plural_slot_name != slot_name && renders_many?(plural_slot_name)
+      end
+
       # Clone slot configuration into child class
       # see #test_slots_pollution
       def inherited(child)
